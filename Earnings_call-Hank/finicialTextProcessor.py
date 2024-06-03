@@ -50,15 +50,15 @@ class FinancialTextProcessor:
         short_paragraphs = [index for index, paragraph in enumerate(paragraphs) if len(paragraph) < 100]
 
         # 顯示對應索引的段落
-        for index in short_paragraphs:
-            print(f"Index: {index}, len: {len(paragraphs[index])}, Paragraph: {paragraphs[index]}")
+        # for index in short_paragraphs:
+        #     print(f"Index: {index}, len: {len(paragraphs[index])}, Paragraph: {paragraphs[index]}")
 
         filtered_paragraphs = [paragraph for index, paragraph in enumerate(paragraphs) if index not in short_paragraphs]
 
         # 顯示結果
         index_lengths = [len(paragraph) for paragraph in filtered_paragraphs]
-        print("Total paragraphs:", len(index_lengths))
-        print("Total characters:", sum(index_lengths))
+        # print("Total paragraphs:", len(index_lengths))
+        # print("Total characters:", sum(index_lengths))
         
         return filtered_paragraphs
     
@@ -99,7 +99,9 @@ class FinancialTextProcessor:
             lm_word_count = sum(word.upper() in self.lm_words for word in words)
             counts.append((index, lm_word_count))
         
-        sorted_counts = sorted(counts, key=lambda x: x[1], reverse=True)
+        # 根據Index(x[0])或LM Word Count(x[1])排序
+        # sorted_counts = sorted(counts, key=lambda x: x[1], reverse=True)
+        sorted_counts = sorted(counts, key=lambda x: x[0])
         
         for index, count in sorted_counts:
             print(f"Index: {index}, LM Word Count: {count}")
@@ -134,7 +136,7 @@ class FinancialTextProcessor:
         plt.title('Frequency of LM Word Counts in Paragraphs')
         plt.show()
 
-    def get_top_lm_word_count_indices(self, counts, filter_text, top_n=10):
+    def get_top_lm_word_count_indices(self, counts, filter_text, top_n=75):
         """
         選擇 LM Word Count 最多的前 top_n 個段落的索引，并返回這些索引及其包含的單詞總數
 
@@ -148,36 +150,41 @@ class FinancialTextProcessor:
             total_word_count: 前 top_n 个段落中的单词总数。
         """
         # 按 LM Word Count 从高到低排序
-        sorted_counts = sorted(counts, key=lambda x: x[1], reverse=True)
+        sorted_counts = sorted(counts, key=lambda x: x[0], reverse=False)
         
         # 选择前 top_n 个段落的索引
         selected_indices = [index for index, _ in sorted_counts[:top_n]]
+        print(selected_indices)
         
         # 计算前 top_n 个段落中的单词总数
         total_word_count = sum(len(paragraph.split()) for index, paragraph in enumerate(filter_text) if index in selected_indices)
+        print(total_word_count)
         
         return selected_indices, total_word_count
     
     def process_and_create_denoised_df(self, df):
         """
-        對原資料集每一列[[paragraph']進行處理，創建包含去噪段落和標籤的新數據集
+        對原資料集每一列['paragraph']進行處理，創建包含去噪段落和標籤的新數據集
         """
         import pandas as pd
         new_paragraphs = []
         new_labels = []
 
-        # row_counts = 0
+        row_counts = 0
 
         for idx, row in df.iterrows():
-            # if row_counts >= 10:
-            #     break
+            if row_counts >= 1:
+                break
             filtered_text = self.process_paragraphs(row['paragraphs'])
             counts = self.count_lm_words_in_paragraphs(filtered_text)
             top_indices, _ = self.get_top_lm_word_count_indices(counts, filtered_text)
-            for i in top_indices:
-                new_paragraphs.append(filtered_text[i])
-                new_labels.append(row['three_class_label'])
-            # row_counts += 1
+
+            # 將前10段落組成一個子文本
+            sub_text = ' '.join([filtered_text[i] for i in top_indices])
+            new_paragraphs.append(sub_text)
+            new_labels.append(row['three_class_label'])
+            
+            row_counts += 1
         
         denoised_df = pd.DataFrame({'paragraphs': new_paragraphs, 'three_class_label': new_labels})
         return denoised_df
