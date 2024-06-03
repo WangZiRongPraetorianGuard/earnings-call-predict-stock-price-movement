@@ -8,13 +8,14 @@ import torch.nn.functional as F
 
 class CustomDataset(Dataset):
     def __init__(self, mode, df, specify, args, method):
-        assert mode in ["train", "test"]
+        assert mode in ["train", "val", "test"]
         self.mode = mode
         self.df = df.reset_index(drop=True)  # 確保索引連續
         self.specify = specify
         self.method = method  # 新增 method 参数
         if self.mode != 'test':
-            self.label = df['three_class_label'].apply(lambda x: x if x != -1 else 2).reset_index(drop=True)  # 將 -1 轉換為 2 並重置索引
+            self.label = df['three_class_label']
+            # self.label = df['three_class_label'].apply(lambda x: x if x != -1 else 2).reset_index(drop=True)  # 將 -1 轉換為 2 並重置索引
         self.tokenizer = AutoTokenizer.from_pretrained(args["config"])
         self.max_len = args["max_len"]
         self.num_class = args["num_class"]
